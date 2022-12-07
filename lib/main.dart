@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 void main() => runApp(const MyApp());
@@ -24,13 +25,18 @@ class AnimApp extends StatefulWidget {
 
 class AnimAppState extends State<AnimApp> with TickerProviderStateMixin {
   int speed = 4;
+  int direct = 0;
+  double begin = 0.0;
+  double end = 6.0;
   double pos = 0;
 
   late double screenWidth, screenHeight;
   dynamic stat;
 
-  final StreamController<int> _streamController = StreamController<int>.broadcast();
-  final StreamController<int> _streamController2 = StreamController<int>();
+  final StreamController<List<int>> _streamController =
+      StreamController<List<int>>();
+  final StreamController<List<int>> _streamController2 =
+      StreamController<List<int>>();
 
   @override
   void dispose() {
@@ -43,47 +49,57 @@ class AnimAppState extends State<AnimApp> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Testing')),
-      body: Column(children: [
-        Container(
-            child: StreamBuilder<int>(
-                stream: _streamController.stream,
-                initialData: 0,
-                builder: (BuildContext context, AsyncSnapshot<int> snapshot) {
-                  Size size = MediaQuery.of(context).size;
-                  screenHeight = size.height;
-                  screenWidth = size.width;
-                  speed =snapshot.data!;
-                  late AnimationController controller = AnimationController(
-                    duration: Duration(seconds: speed),
-                    vsync: this,
-                  )
+      body: Container(
+          child: StreamBuilder<List<int>>(
+              stream: _streamController.stream,
+              initialData: [10, 0, -1, 3],
+              builder:
+                  (BuildContext context, AsyncSnapshot<List<int>> snapshot) {
+                Size size = MediaQuery.of(context).size;
+                screenHeight = size.height;
+                screenWidth = size.width;
+
+                speed = snapshot.data![0];
+                begin = snapshot.data![2].toDouble();
+                end = snapshot.data![3].toDouble();
+                direct = snapshot.data![1].toInt();
+
+                late AnimationController controller = AnimationController(
+                  duration: Duration(seconds: speed),
+                  vsync: this,
+                )
                     //..repeat(reverse: true)
-                  ;
+                    ;
 
-                  late Animation<Offset> offsetAnimation = Tween<Offset>(
-                    begin: Offset((25-screenWidth)*0.01, 0.0),
-                    end: Offset((screenWidth - 25) * 0.01, 0.0),
-                  ).animate(CurvedAnimation(
-                    parent: controller,
-                    curve: Curves.linear,
-                  ));
-                  controller.forward();
+                late Animation<Offset> offsetAnimation = Tween<Offset>(
+                  begin: Offset(begin, 0.0),
+                  end: Offset(end, 0.0),
+                ).animate(CurvedAnimation(
+                  parent: controller,
+                  curve: Curves.linear,
+                ));
 
-                  offsetAnimation.addStatusListener((status) {
-                    if (snapshot.hasData) {
-                      speed = snapshot.data!;
+                if (direct == 0) controller.forward();
+                if (direct == 1) controller.reverse();
 
-                      print('speed: '+speed.toString());
-                      if (speed > 0)
-                            {  controller.duration=Duration(seconds: speed);}
-                    }
-                    if(status == AnimationStatus.completed) {
-controller.duration=Duration(seconds: 10);
-                      controller.reverse();
-                    } else if(status == AnimationStatus.dismissed) {
-                      controller.forward();
-                    }
-                  });
+                offsetAnimation.addStatusListener((status) {
+                  if (status == AnimationStatus.completed) {
+                    controller.reverse();
+                  } else if (status == AnimationStatus.dismissed) {
+                    controller.forward();
+                  }
+                  if (status == AnimationStatus.forward) direct = 0;
+                  if (status == AnimationStatus.reverse) direct = 0;
+                  print('0000');
+                  //       speed = int.parse(controller.duration.toString());
+                  print('11111');
+                  pos = offsetAnimation.value.dx;
+
+                  print(direct.toString());
+
+                  _streamController2.add(
+                      [speed, direct, begin.toInt(), end.toInt(), pos.toInt()]);
+                });
 /*
 controller.addListener(() {
   pos= offsetAnimation.value.dx;
@@ -103,70 +119,61 @@ controller.addListener(() {
 
 });
 */
-                  return SlideTransition(
-                    position: offsetAnimation,
-                    child: const Padding(
-                      padding: EdgeInsets.all(0.0),
-                      child: FlutterLogo(size: 50.0),
-                    ),
-                  );
-                })),
-        Container(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              ElevatedButton(
-                  onPressed: () {
-                    _streamController.add(4);
-                  },
-                  child: const Text('1')),
-              ElevatedButton(
-                  onPressed: () {
-                    _streamController.add(3);
-                  },
-                  child: const Text('2')),
-              ElevatedButton(
-                  onPressed: () {
-                    _streamController.add(2);
-                  },
-                  child: const Text('3')),
-              ElevatedButton(
-                  onPressed: () {
-                    _streamController.add(1);
-                  },
-                  child: const Text('4')),
-              ElevatedButton(onPressed: () {}, child: const Text('5')),
-            ],
-          ),
-        )
-      ]),
+                return SlideTransition(
+                  position: offsetAnimation,
+                  child: const Padding(
+                    padding: EdgeInsets.all(0.0),
+                    child: FlutterLogo(size: 50.0),
+                  ),
+                );
+              })),
       persistentFooterButtons: [
-        StreamBuilder<int>(
+        StreamBuilder<List<int>>(
             stream: _streamController2.stream,
-            initialData: 4,
-            builder: (BuildContext context, AsyncSnapshot<int> snapshot) {
+            initialData: [1, 0, 1, 1, 1],
+            builder: (BuildContext context, AsyncSnapshot<List<int>> snapshot) {
               return BottomAppBar(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     ElevatedButton(
                         onPressed: () {
-                          _streamController.sink.add(4);
+                          _streamController.sink.add([
+                            4,
+                            snapshot.data![1],
+                            snapshot.data![2],
+                            snapshot.data![3]
+                          ]);
                         },
                         child: const Text('1')),
                     ElevatedButton(
                         onPressed: () {
-                          _streamController.sink.add(3);
+                          _streamController.sink.add([
+                            3,
+                            snapshot.data![1],
+                            snapshot.data![2],
+                            snapshot.data![3]
+                          ]);
                         },
                         child: const Text('2')),
                     ElevatedButton(
                         onPressed: () {
-                          _streamController.sink.add(2);
+                          _streamController.sink.add([
+                            2,
+                            snapshot.data![1],
+                            snapshot.data![2],
+                            snapshot.data![3]
+                          ]);
                         },
                         child: const Text('3')),
                     ElevatedButton(
                         onPressed: () {
-                          _streamController.sink.add(1);
+                          _streamController.sink.add([
+                            1,
+                            snapshot.data![1],
+                            snapshot.data![2],
+                            snapshot.data![3]
+                          ]);
                         },
                         child: const Text('4')),
                   ],
