@@ -44,7 +44,7 @@ class AnimAppState extends State<AnimApp> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-    final screenWidth = size.width * 0.019;
+    final screenWidth = size.width * 0.0175;
     return Scaffold(
       appBar: AppBar(title: const Text('Testing')),
       body: StreamBuilder<List<dynamic>>(
