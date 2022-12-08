@@ -24,19 +24,15 @@ class AnimApp extends StatefulWidget {
 }
 
 class AnimAppState extends State<AnimApp> with TickerProviderStateMixin {
-  int speed = 4;
-  int direct = 0;
-  double begin = 0.0;
-  double end = 6.0;
-  double pos = 0;
-
   late double screenWidth, screenHeight;
-  dynamic stat;
+  var speed = 1000000;
 
-  final StreamController<List<int>> _streamController =
-      StreamController<List<int>>();
-  final StreamController<List<int>> _streamController2 =
-      StreamController<List<int>>();
+  final StreamController<List<dynamic>> _streamController =
+      StreamController<List<dynamic>>();
+  final StreamController<List<dynamic>> _streamController2 =
+      StreamController<List<dynamic>>();
+  late AnimationController controller;
+  late Animation<Offset> offsetAnimation;
 
   @override
   void dispose() {
@@ -47,133 +43,163 @@ class AnimAppState extends State<AnimApp> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    Size size = MediaQuery.of(context).size;
+    final screenWidth = size.width * 0.019;
     return Scaffold(
       appBar: AppBar(title: const Text('Testing')),
-      body: Container(
-          child: StreamBuilder<List<int>>(
-              stream: _streamController.stream,
-              initialData: [10, 0, -1, 3],
-              builder:
-                  (BuildContext context, AsyncSnapshot<List<int>> snapshot) {
-                Size size = MediaQuery.of(context).size;
-                screenHeight = size.height;
-                screenWidth = size.width;
+      body: StreamBuilder<List<dynamic>>(
+          stream: _streamController.stream,
+          initialData: [10, AnimationStatus.forward, 0.0, screenWidth],
+          builder:
+              (BuildContext context, AsyncSnapshot<List<dynamic>> snapshot) {
+            controller = AnimationController(
+              duration: Duration(
+                  microseconds: ((snapshot.data![3] - snapshot.data![2]) *
+                          snapshot.data![0] ~/
+                          screenWidth) +
+                      1),
+              vsync: this,
+            );
 
-                speed = snapshot.data![0];
-                begin = snapshot.data![2].toDouble();
-                end = snapshot.data![3].toDouble();
-                direct = snapshot.data![1].toInt();
+            offsetAnimation = Tween<Offset>(
+              begin: Offset(snapshot.data![2], 5.0),
+              end: Offset(snapshot.data![3], 5.0),
+            ).animate(CurvedAnimation(
+              parent: controller,
+              curve: Curves.linear,
+            ));
 
-                late AnimationController controller = AnimationController(
-                  duration: Duration(seconds: speed),
-                  vsync: this,
-                )
-                    //..repeat(reverse: true)
-                    ;
+            if (snapshot.data![1] == AnimationStatus.forward) {
+              controller.forward();
+            }
+            if (snapshot.data![1] == AnimationStatus.reverse) {
+              controller.reverse(from: snapshot.data![3]);
+            }
 
-                late Animation<Offset> offsetAnimation = Tween<Offset>(
-                  begin: Offset(begin, 0.0),
-                  end: Offset(end, 0.0),
-                ).animate(CurvedAnimation(
-                  parent: controller,
-                  curve: Curves.linear,
-                ));
+            offsetAnimation.addListener(() {
+              var pos = offsetAnimation.value.dx;
+              var status = controller.status;
+              var dur = controller.duration!.inSeconds;
+              if (pos != 0.0 && pos != screenWidth) {
+                _streamController2.add([dur, status, 0.0, screenWidth, pos]);
+              } else if (status == AnimationStatus.completed) {
+                controller.reverse();
+                _streamController2
+                    .add([dur, AnimationStatus.reverse, 0.0, screenWidth, pos]);
+              } else if (status == AnimationStatus.dismissed) {
+                controller.forward();
+                _streamController2
+                    .add([dur, AnimationStatus.forward, 0.0, screenWidth, pos]);
+              }
+            });
 
-                if (direct == 0) controller.forward();
-                if (direct == 1) controller.reverse();
-
-                offsetAnimation.addStatusListener((status) {
-                  if (status == AnimationStatus.completed) {
-                    controller.reverse();
-                  } else if (status == AnimationStatus.dismissed) {
-                    controller.forward();
-                  }
-                  if (status == AnimationStatus.forward) direct = 0;
-                  if (status == AnimationStatus.reverse) direct = 0;
-                  print('0000');
-                  //       speed = int.parse(controller.duration.toString());
-                  print('11111');
-                  pos = offsetAnimation.value.dx;
-
-                  print(direct.toString());
-
-                  _streamController2.add(
-                      [speed, direct, begin.toInt(), end.toInt(), pos.toInt()]);
-                });
-/*
-controller.addListener(() {
-  pos= offsetAnimation.value.dx;
-//  print(controller.status.toString());
-  if (controller.status == AnimationStatus.completed) {
-    setState(() {
-
-      pos = 0.0;
-      print(pos.toString());
-
-
-    });
-    controller.forward(from: 0.0);
-
-    }
-
-
-});
-*/
-                return SlideTransition(
-                  position: offsetAnimation,
-                  child: const Padding(
-                    padding: EdgeInsets.all(0.0),
-                    child: FlutterLogo(size: 50.0),
-                  ),
-                );
-              })),
+            return SlideTransition(
+              position: offsetAnimation,
+              child: const Padding(
+                padding: EdgeInsets.all(0.0),
+                child: FlutterLogo(size: 50.0),
+              ),
+            );
+          }),
       persistentFooterButtons: [
-        StreamBuilder<List<int>>(
+        StreamBuilder<List<dynamic>>(
             stream: _streamController2.stream,
-            initialData: [1, 0, 1, 1, 1],
-            builder: (BuildContext context, AsyncSnapshot<List<int>> snapshot) {
+            initialData: [1, 0, 0.0, screenWidth, 0.0],
+            builder:
+                (BuildContext context, AsyncSnapshot<List<dynamic>> snapshot) {
+              var pos = snapshot.data![4];
+              var dir = snapshot.data![1];
+              if (pos == screenWidth) {
+                _streamController.sink
+                    .add([speed, AnimationStatus.reverse, 0.0, screenWidth]);
+              }
+              if (pos == 0.0) {
+                _streamController.sink
+                    .add([speed, AnimationStatus.forward, 0.0, screenWidth]);
+              }
+
               return BottomAppBar(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     ElevatedButton(
                         onPressed: () {
-                          _streamController.sink.add([
-                            4,
-                            snapshot.data![1],
-                            snapshot.data![2],
-                            snapshot.data![3]
-                          ]);
+                          speed = 4000000;
+                          if (dir == AnimationStatus.forward) {
+                            _streamController.sink.add([
+                              (speed * (screenWidth - pos)) ~/ screenWidth,
+                              AnimationStatus.forward,
+                              pos,
+                              screenWidth
+                            ]);
+                          } else {
+                            _streamController.sink.add([
+                              (speed * pos) ~/ screenWidth,
+                              AnimationStatus.reverse,
+                              0.0,
+                              pos
+                            ]);
+                          }
                         },
                         child: const Text('1')),
                     ElevatedButton(
                         onPressed: () {
-                          _streamController.sink.add([
-                            3,
-                            snapshot.data![1],
-                            snapshot.data![2],
-                            snapshot.data![3]
-                          ]);
+                          speed = 3000000;
+                          if (dir == AnimationStatus.forward) {
+                            _streamController.sink.add([
+                              (speed * (screenWidth - pos)) ~/ screenWidth,
+                              AnimationStatus.forward,
+                              pos,
+                              screenWidth
+                            ]);
+                          } else {
+                            _streamController.sink.add([
+                              (speed * pos) ~/ screenWidth,
+                              AnimationStatus.reverse,
+                              0.0,
+                              pos
+                            ]);
+                          }
                         },
                         child: const Text('2')),
                     ElevatedButton(
                         onPressed: () {
-                          _streamController.sink.add([
-                            2,
-                            snapshot.data![1],
-                            snapshot.data![2],
-                            snapshot.data![3]
-                          ]);
+                          speed = 2000000;
+                          if (dir == AnimationStatus.forward) {
+                            _streamController.sink.add([
+                              (speed * (screenWidth - pos)) ~/ screenWidth,
+                              AnimationStatus.forward,
+                              pos,
+                              screenWidth
+                            ]);
+                          } else {
+                            _streamController.sink.add([
+                              (speed * pos) ~/ screenWidth,
+                              AnimationStatus.reverse,
+                              0.0,
+                              pos
+                            ]);
+                          }
                         },
                         child: const Text('3')),
                     ElevatedButton(
                         onPressed: () {
-                          _streamController.sink.add([
-                            1,
-                            snapshot.data![1],
-                            snapshot.data![2],
-                            snapshot.data![3]
-                          ]);
+                          speed = 1000000;
+                          if (dir == AnimationStatus.forward) {
+                            _streamController.sink.add([
+                              (speed * (screenWidth - pos)) ~/ screenWidth,
+                              AnimationStatus.forward,
+                              pos,
+                              screenWidth
+                            ]);
+                          } else {
+                            _streamController.sink.add([
+                              (speed * pos) ~/ screenWidth,
+                              AnimationStatus.reverse,
+                              0.0,
+                              pos
+                            ]);
+                          }
                         },
                         child: const Text('4')),
                   ],
