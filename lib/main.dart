@@ -44,12 +44,13 @@ class AnimAppState extends State<AnimApp> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-    final screenWidth = size.width * 0.0175;
+    screenWidth = (size.width-40) /40;
+    screenHeight = (size.height-160) /80;
     return Scaffold(
       appBar: AppBar(title: const Text('Testing')),
       body: StreamBuilder<List<dynamic>>(
           stream: _streamController.stream,
-          initialData: [10, AnimationStatus.forward, 0.0, screenWidth],
+          initialData: [20, AnimationStatus.forward, 0.0, screenWidth],
           builder:
               (BuildContext context, AsyncSnapshot<List<dynamic>> snapshot) {
             controller = AnimationController(
@@ -62,8 +63,8 @@ class AnimAppState extends State<AnimApp> with TickerProviderStateMixin {
             );
 
             offsetAnimation = Tween<Offset>(
-              begin: Offset(snapshot.data![2], 5.0),
-              end: Offset(snapshot.data![3], 5.0),
+              begin: Offset(snapshot.data![2], screenHeight),
+              end: Offset(snapshot.data![3], screenHeight),
             ).animate(CurvedAnimation(
               parent: controller,
               curve: Curves.linear,
@@ -93,13 +94,16 @@ class AnimAppState extends State<AnimApp> with TickerProviderStateMixin {
               }
             });
 
-            return SlideTransition(
+            return Row(
+              mainAxisSize: MainAxisSize.max,
+                children: [SlideTransition(
               position: offsetAnimation,
               child: const Padding(
                 padding: EdgeInsets.all(0.0),
-                child: FlutterLogo(size: 50.0),
+                child: FlutterLogo(size: 40.0),
               ),
-            );
+            )]);
+
           }),
       persistentFooterButtons: [
         StreamBuilder<List<dynamic>>(
@@ -141,6 +145,10 @@ class AnimAppState extends State<AnimApp> with TickerProviderStateMixin {
                             ]);
                           }
                         },
+                        style:  speed == 4000000 ? const ButtonStyle(
+                          backgroundColor: MaterialStatePropertyAll(Colors.green)):const ButtonStyle(
+                        backgroundColor: MaterialStatePropertyAll(Colors.blue),
+                        ),
                         child: const Text('1')),
                     ElevatedButton(
                         onPressed: () {
@@ -161,6 +169,11 @@ class AnimAppState extends State<AnimApp> with TickerProviderStateMixin {
                             ]);
                           }
                         },
+                        style:  speed == 3000000 ? const ButtonStyle(
+                            backgroundColor: MaterialStatePropertyAll(Colors.green)):const ButtonStyle(
+                          backgroundColor: MaterialStatePropertyAll(Colors.blue),
+                        ),
+
                         child: const Text('2')),
                     ElevatedButton(
                         onPressed: () {
@@ -181,6 +194,11 @@ class AnimAppState extends State<AnimApp> with TickerProviderStateMixin {
                             ]);
                           }
                         },
+                        style:  speed == 2000000 ? const ButtonStyle(
+                            backgroundColor: MaterialStatePropertyAll(Colors.green)):const ButtonStyle(
+                          backgroundColor: MaterialStatePropertyAll(Colors.blue),
+                        ),
+
                         child: const Text('3')),
                     ElevatedButton(
                         onPressed: () {
@@ -201,6 +219,11 @@ class AnimAppState extends State<AnimApp> with TickerProviderStateMixin {
                             ]);
                           }
                         },
+                        style:  speed == 1000000 ? const ButtonStyle(
+                            backgroundColor: MaterialStatePropertyAll(Colors.green)):const ButtonStyle(
+                          backgroundColor: MaterialStatePropertyAll(Colors.blue),
+                        ),
+
                         child: const Text('4')),
                   ],
                 ),
